@@ -1,0 +1,376 @@
+# Sales Dashboard - Visual Enhancement Module
+# Adds interactive charts and visualizations to the main dashboard
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import pandas as pd
+from datetime import datetime
+import numpy as np
+import warnings
+warnings.filterwarnings('ignore')
+
+class SalesDashboard:
+    """Main Sales Dashboard Class - generates sample data and basic functionality"""
+    
+    def __init__(self):
+        self.sales_df = None
+        self.products_df = None
+    
+    def generate_data(self):
+        """Generate sample sales data"""
+        np.random.seed(42)  # For reproducible results
+        
+        # Generate sample sales data
+        n_records = 10000
+        regions = ['North', 'South', 'East', 'West', 'Central']
+        categories = ['Electronics', 'Clothing', 'Food', 'Books', 'Home', 'Sports', 'Beauty', 'Toys']
+        channels = ['Online', 'Retail', 'Wholesale', 'Direct']
+        
+        data = {
+            'date': pd.date_range('2023-01-01', periods=n_records, freq='H'),
+            'sku': [f'SKU{i:05d}' for i in np.random.randint(1, 1000, n_records)],
+            'category': np.random.choice(categories, n_records),
+            'region': np.random.choice(regions, n_records),
+            'sales_channel': np.random.choice(channels, n_records),
+            'quantity': np.random.randint(1, 10, n_records),
+            'unit_price': np.random.uniform(10, 500, n_records),
+        }
+        
+        self.sales_df = pd.DataFrame(data)
+        self.sales_df['net_sales'] = self.sales_df['quantity'] * self.sales_df['unit_price']
+        self.sales_df['profit_margin'] = np.random.uniform(5, 30, n_records)
+        self.sales_df['profit'] = self.sales_df['net_sales'] * (self.sales_df['profit_margin'] / 100)
+        
+        # Generate products data
+        unique_skus = self.sales_df['sku'].unique()
+        self.products_df = pd.DataFrame({
+            'sku': unique_skus,
+            'category': [self.sales_df[self.sales_df['sku'] == sku]['category'].iloc[0] for sku in unique_skus],
+            'avg_price': [self.sales_df[self.sales_df['sku'] == sku]['unit_price'].mean() for sku in unique_skus]
+        })
+        
+        print(f"✅ Generated {len(self.sales_df)} sales records and {len(self.products_df)} product records")
+    
+    def create_database(self):
+        """Simulate database creation/connection"""
+        print("✅ Database connection established")
+        print(f"📊 Sales data shape: {self.sales_df.shape}")
+        print(f"🏷️ Products data shape: {self.products_df.shape}")
+    
+    def create_executive_summary(self):
+        """Generate executive summary text"""
+        total_revenue = self.sales_df['net_sales'].sum()
+        total_profit = self.sales_df['profit'].sum()
+        avg_margin = self.sales_df['profit_margin'].mean()
+        top_region = self.sales_df.groupby('region')['net_sales'].sum().idxmax()
+        
+        summary = f"""
+        📈 EXECUTIVE SALES SUMMARY
+        ========================
+        
+        💰 Total Revenue: ${total_revenue:,.2f}
+        💵 Total Profit: ${total_profit:,.2f}
+        📊 Average Profit Margin: {avg_margin:.2f}%
+        🏆 Top Performing Region: {top_region}
+        
+        📅 Reporting Period: {self.sales_df['date'].min().date()} to {self.sales_df['date'].max().date()}
+        🛍️ Total Transactions: {len(self.sales_df):,}
+        📦 Unique Products: {self.sales_df['sku'].nunique():,}
+        """
+        return summary
+
+class DashboardVisualizer:
+    """Create professional visualizations for the sales dashboard"""
+    
+    def __init__(self, sales_df, products_df):
+        self.sales_df = sales_df
+        self.products_df = products_df
+        # Set professional styling
+        plt.style.use('seaborn-v0_8')
+        sns.set_palette("husl")
+        
+    def create_executive_dashboard(self):
+        """Create a comprehensive executive dashboard with multiple KPI visualizations"""
+        
+        # Create a large figure with multiple subplots
+        fig, axes = plt.subplots(2, 3, figsize=(20, 12))
+        fig.suptitle('Sales Performance Dashboard - Executive Summary', fontsize=20, fontweight='bold')
+        
+        # 1. Regional Performance Bar Chart
+        regional_sales = self.sales_df.groupby('region')['net_sales'].sum().sort_values(ascending=False)
+        axes[0,0].bar(regional_sales.index, regional_sales.values, color='skyblue', edgecolor='navy', alpha=0.7)
+        axes[0,0].set_title('Revenue by Region', fontweight='bold', fontsize=14)
+        axes[0,0].set_ylabel('Revenue ($)', fontweight='bold')
+        axes[0,0].tick_params(axis='x', rotation=45)
+        
+        # Format y-axis to show values in millions
+        axes[0,0].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
+        
+        # 2. Monthly Revenue Trend
+        self.sales_df['month'] = pd.to_datetime(self.sales_df['date']).dt.to_period('M')
+        monthly_sales = self.sales_df.groupby('month')['net_sales'].sum()
+        axes[0,1].plot(range(len(monthly_sales)), monthly_sales.values, marker='o', linewidth=3, markersize=6, color='green')
+        axes[0,1].set_title('Monthly Revenue Trend', fontweight='bold', fontsize=14)
+        axes[0,1].set_ylabel('Revenue ($)', fontweight='bold')
+        axes[0,1].set_xlabel('Month', fontweight='bold')
+        axes[0,1].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
+        
+        # 3. Top 10 Product Categories
+        category_sales = self.sales_df.groupby('category')['net_sales'].sum().sort_values(ascending=True).tail(10)
+        axes[0,2].barh(category_sales.index, category_sales.values, color='coral', alpha=0.8)
+        axes[0,2].set_title('Top 10 Product Categories', fontweight='bold', fontsize=14)
+        axes[0,2].set_xlabel('Revenue ($)', fontweight='bold')
+        axes[0,2].xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
+        
+        # 4. Profit Margin Distribution
+        axes[1,0].hist(self.sales_df['profit_margin'], bins=30, color='purple', alpha=0.7, edgecolor='black')
+        axes[1,0].set_title('Profit Margin Distribution', fontweight='bold', fontsize=14)
+        axes[1,0].set_xlabel('Profit Margin (%)', fontweight='bold')
+        axes[1,0].set_ylabel('Frequency', fontweight='bold')
+        
+        # 5. Sales Channel Performance
+        channel_sales = self.sales_df.groupby('sales_channel')['net_sales'].sum()
+        axes[1,1].pie(channel_sales.values, labels=channel_sales.index, autopct='%1.1f%%', startangle=90)
+        axes[1,1].set_title('Revenue by Sales Channel', fontweight='bold', fontsize=14)
+        
+        # 6. Top 15 Products by Revenue
+        top_products = self.sales_df.groupby('sku')['net_sales'].sum().sort_values(ascending=True).tail(15)
+        axes[1,2].barh(range(len(top_products)), top_products.values, color='gold', alpha=0.8)
+        axes[1,2].set_title('Top 15 Products by Revenue', fontweight='bold', fontsize=14)
+        axes[1,2].set_xlabel('Revenue ($)', fontweight='bold')
+        axes[1,2].set_yticks(range(len(top_products)))
+        axes[1,2].set_yticklabels([f'SKU{i+1}' for i in range(len(top_products))])
+        axes[1,2].xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e3:.0f}K'))
+        
+        plt.tight_layout()
+        return fig
+    
+    def create_interactive_dashboard(self):
+        """Create interactive Plotly dashboard"""
+        
+        # Regional Performance with Plotly
+        regional_data = self.sales_df.groupby('region').agg({
+            'net_sales': 'sum',
+            'profit': 'sum',
+            'quantity': 'sum'
+        }).reset_index()
+        
+        # Create subplots
+        fig = make_subplots(
+            rows=2, cols=2,
+            subplot_titles=('Regional Revenue Performance', 'Monthly Sales Trend', 
+                          'Product Category Analysis', 'Sales Channel Distribution'),
+            specs=[[{"secondary_y": False}, {"secondary_y": False}],
+                   [{"secondary_y": False}, {"type": "pie"}]]
+        )
+        
+        # Regional Revenue Bar Chart
+        fig.add_trace(
+            go.Bar(x=regional_data['region'], y=regional_data['net_sales'], 
+                   name='Revenue', marker_color='lightblue'),
+            row=1, col=1
+        )
+        
+        # Monthly Trend Line Chart
+        monthly_data = self.sales_df.groupby(self.sales_df['date'].dt.to_period('M'))['net_sales'].sum().reset_index()
+        fig.add_trace(
+            go.Scatter(x=monthly_data.index, y=monthly_data['net_sales'], 
+                      mode='lines+markers', name='Monthly Revenue', line=dict(color='green', width=3)),
+            row=1, col=2
+        )
+        
+        # Category Analysis
+        category_data = self.sales_df.groupby('category')['net_sales'].sum().sort_values(ascending=False).head(8)
+        fig.add_trace(
+            go.Bar(x=category_data.index, y=category_data.values, 
+                   name='Category Revenue', marker_color='coral'),
+            row=2, col=1
+        )
+        
+        # Sales Channel Pie Chart
+        channel_data = self.sales_df.groupby('sales_channel')['net_sales'].sum()
+        fig.add_trace(
+            go.Pie(labels=channel_data.index, values=channel_data.values, name="Sales Channel"),
+            row=2, col=2
+        )
+        
+        # Update layout
+        fig.update_layout(height=800, showlegend=True, 
+                         title_text="Interactive Sales Performance Dashboard",
+                         title_x=0.5, title_font_size=20)
+        
+        return fig
+    
+    def generate_kpi_summary_visual(self):
+        """Create visual KPI summary cards"""
+        
+        # Calculate key metrics
+        total_revenue = self.sales_df['net_sales'].sum()
+        total_profit = self.sales_df['profit'].sum()
+        total_transactions = len(self.sales_df)
+        avg_order_value = self.sales_df['net_sales'].mean()
+        top_region = self.sales_df.groupby('region')['net_sales'].sum().idxmax()
+        
+        # Create KPI visualization
+        fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+        fig.suptitle('Key Performance Indicators Dashboard', fontsize=20, fontweight='bold')
+        
+        # Remove axes and create card-like appearance
+        for i, ax in enumerate(axes.flat):
+            ax.set_xticks([])
+            ax.set_yticks([])
+            for spine in ax.spines.values():
+                spine.set_visible(True)
+                spine.set_linewidth(2)
+                spine.set_edgecolor('navy')
+        
+        # KPI 1: Total Revenue
+        axes[0,0].text(0.5, 0.7, 'Total Revenue', ha='center', va='center', fontsize=16, fontweight='bold')
+        axes[0,0].text(0.5, 0.3, f'${total_revenue:,.0f}', ha='center', va='center', fontsize=20, color='green', fontweight='bold')
+        axes[0,0].set_facecolor('lightgreen')
+        axes[0,0].set_alpha(0.3)
+        
+        # KPI 2: Total Profit
+        axes[0,1].text(0.5, 0.7, 'Total Profit', ha='center', va='center', fontsize=16, fontweight='bold')
+        axes[0,1].text(0.5, 0.3, f'${total_profit:,.0f}', ha='center', va='center', fontsize=20, color='blue', fontweight='bold')
+        axes[0,1].set_facecolor('lightblue')
+        
+        # KPI 3: Total Transactions
+        axes[0,2].text(0.5, 0.7, 'Total Transactions', ha='center', va='center', fontsize=16, fontweight='bold')
+        axes[0,2].text(0.5, 0.3, f'{total_transactions:,}', ha='center', va='center', fontsize=20, color='purple', fontweight='bold')
+        axes[0,2].set_facecolor('plum')
+        
+        # KPI 4: Average Order Value
+        axes[1,0].text(0.5, 0.7, 'Avg Order Value', ha='center', va='center', fontsize=16, fontweight='bold')
+        axes[1,0].text(0.5, 0.3, f'${avg_order_value:,.0f}', ha='center', va='center', fontsize=20, color='orange', fontweight='bold')
+        axes[1,0].set_facecolor('peachpuff')
+        
+        # KPI 5: Top Region
+        axes[1,1].text(0.5, 0.7, 'Top Region', ha='center', va='center', fontsize=16, fontweight='bold')
+        axes[1,1].text(0.5, 0.3, f'{top_region}', ha='center', va='center', fontsize=20, color='red', fontweight='bold')
+        axes[1,1].set_facecolor('lightcoral')
+        
+        # KPI 6: Product SKUs
+        total_skus = self.sales_df['sku'].nunique()
+        axes[1,2].text(0.5, 0.7, 'Total SKUs', ha='center', va='center', fontsize=16, fontweight='bold')
+        axes[1,2].text(0.5, 0.3, f'{total_skus:,}', ha='center', va='center', fontsize=20, color='brown', fontweight='bold')
+        axes[1,2].set_facecolor('wheat')
+        
+        plt.tight_layout()
+        return fig
+    
+    def export_to_excel(self, filename='sales_dashboard_analysis.xlsx'):
+        """Export comprehensive analysis to Excel with multiple sheets"""
+        
+        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+            
+            # Sheet 1: Executive Summary
+            kpi_data = {
+                'Metric': ['Total Revenue', 'Total Profit', 'Total Transactions', 'Average Order Value', 
+                          'Total Products', 'Total Regions', 'Top Region', 'Profit Margin %'],
+                'Value': [
+                    f"${self.sales_df['net_sales'].sum():,.2f}",
+                    f"${self.sales_df['profit'].sum():,.2f}",
+                    f"{len(self.sales_df):,}",
+                    f"${self.sales_df['net_sales'].mean():,.2f}",
+                    f"{self.sales_df['sku'].nunique():,}",
+                    f"{self.sales_df['region'].nunique()}",
+                    f"{self.sales_df.groupby('region')['net_sales'].sum().idxmax()}",
+                    f"{self.sales_df['profit_margin'].mean():.2f}%"
+                ]
+            }
+            pd.DataFrame(kpi_data).to_excel(writer, sheet_name='Executive Summary', index=False)
+            
+            # Sheet 2: Regional Analysis
+            regional_summary = self.sales_df.groupby('region').agg({
+                'net_sales': ['sum', 'mean', 'count'],
+                'profit': 'sum',
+                'quantity': 'sum',
+                'sku': 'nunique'
+            }).round(2)
+            regional_summary.to_excel(writer, sheet_name='Regional Analysis')
+            
+            # Sheet 3: Product Performance
+            product_summary = self.sales_df.groupby(['sku', 'category']).agg({
+                'net_sales': 'sum',
+                'profit': 'sum',
+                'quantity': 'sum',
+                'profit_margin': 'mean'
+            }).round(2).sort_values('net_sales', ascending=False)
+            product_summary.to_excel(writer, sheet_name='Product Performance')
+            
+            # Sheet 4: Monthly Trends
+            monthly_summary = self.sales_df.groupby(
+                self.sales_df['date'].dt.to_period('M')
+            ).agg({
+                'net_sales': 'sum',
+                'profit': 'sum',
+                'quantity': 'sum'
+            }).round(2)
+            monthly_summary.to_excel(writer, sheet_name='Monthly Trends')
+            
+        print(f"✅ Excel analysis exported to: {filename}")
+        return filename
+
+# Example usage function
+def create_comprehensive_visuals(sales_df, products_df):
+    """Create all visualizations and export results"""
+    
+    visualizer = DashboardVisualizer(sales_df, products_df)
+    
+    print("🎨 Creating Executive Dashboard...")
+    exec_fig = visualizer.create_executive_dashboard()
+    exec_fig.savefig('executive_dashboard.png', dpi=300, bbox_inches='tight', facecolor='white')
+    
+    print("📊 Creating KPI Summary...")
+    kpi_fig = visualizer.generate_kpi_summary_visual()
+    kpi_fig.savefig('kpi_summary.png', dpi=300, bbox_inches='tight', facecolor='white')
+    
+    print("💼 Exporting Excel Analysis...")
+    excel_file = visualizer.export_to_excel()
+    
+    print("📈 Creating Interactive Dashboard...")
+    interactive_fig = visualizer.create_interactive_dashboard()
+    interactive_fig.write_html('interactive_dashboard.html')
+    
+    print("\n✅ All visualizations created successfully!")
+    print("📁 Files generated:")
+    print("   • executive_dashboard.png")
+    print("   • kpi_summary.png") 
+    print("   • sales_dashboard_analysis.xlsx")
+    print("   • interactive_dashboard.html")
+    
+    return {
+        'executive_dashboard': exec_fig,
+        'kpi_summary': kpi_fig,
+        'interactive_dashboard': interactive_fig,
+        'excel_file': excel_file
+    }
+
+# Integration with main dashboard
+def enhanced_dashboard_run():
+    """Run the complete enhanced dashboard with visualizations"""
+    
+    # Create and run main dashboard (no import needed - class defined above)
+    dashboard = SalesDashboard()
+    dashboard.generate_data()
+    dashboard.create_database()
+    
+    # Generate text summary
+    summary = dashboard.create_executive_summary()
+    print(summary)
+    
+    # Create all visualizations
+    visuals = create_comprehensive_visuals(dashboard.sales_df, dashboard.products_df)
+    
+    return dashboard, visuals
+
+if __name__ == "__main__":
+    print("🚀 Enhanced Sales Dashboard with Professional Visualizations")
+    print("=" * 70)
+    dashboard, visuals = enhanced_dashboard_run()
+    print("=" * 70)
+    print("🎯 Complete professional dashboard package ready!")
